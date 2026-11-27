@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,7 +38,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -128,12 +131,26 @@ private val unitGradients = listOf(
 /** Horizontal offsets that make the lesson nodes snake down the screen. */
 private val zigzag = listOf(0, 56, 0, -56)
 
+/**
+ * List index of the banner for the unit the learner is working on, so the path can open there. Stays at the top
+ * (daily goal card) while they're still in unit 1. Mirrors the item order in [PathScreen].
+ */
+fun currentUnitItemIndex(units: List<UnitProgress>): Int {
+    val current = units.indexOfFirst { !it.completed }
+    if (current <= 0) return 0
+    return 1 + units.take(current).sumOf { 1 + it.nodes.size + if (it.completed) 1 else 0 }
+}
+
 @Composable
 fun PathScreen(state: PathUiState, onStartLesson: (String) -> Unit, onReview: () -> Unit) {
+    val target = remember(state.units) { currentUnitItemIndex(state.units) }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = target)
+    LaunchedEffect(target) { if (target > 0) listState.scrollToItem(target) }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopStats(state.streak, state.practisedToday, state.xp, state.hearts, Modifier.statusBarsPadding())
         LazyColumn(
             Modifier.fillMaxSize(),
+            state = listState,
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
