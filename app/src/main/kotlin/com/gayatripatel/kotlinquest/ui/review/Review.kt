@@ -87,9 +87,9 @@ fun reviewUiState(course: Course, progress: Progress, today: LocalDate): ReviewU
 }
 
 /** A short title for a card in the list: the prompt, or for "what does this print?" the first line of code. */
-private fun Exercise.cardTitle(): String = when {
-    this is Exercise.Choice && kind == ChoiceKind.PREDICT_OUTPUT && code != null -> "`${code.lineSequence().last().trim()}`"
-    else -> prompt
+private fun Exercise.cardTitle(): String {
+    val code = (this as? Exercise.Choice)?.takeIf { it.kind == ChoiceKind.PREDICT_OUTPUT }?.code ?: return prompt
+    return "`${code.lineSequence().last().trim()}`"
 }
 
 class ReviewViewModel(repo: ProgressRepository, course: Course, clock: Clock) : ViewModel() {
