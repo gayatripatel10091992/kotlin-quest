@@ -29,10 +29,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Unit tests + debug & release builds
-        run: ./gradlew :core:test assembleDebug assembleRelease --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew :core:test assembleDebug assembleRelease --stacktrace 2>&1 | tee build.log; then
+            # Surface compiler and test errors as one annotation, so they show on the run summary.
+            msg=$(grep -E "^e: |error:|FAILED|What went wrong|> .*failed|AssertionError|Exception" build.log | head -40 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Build failed::${msg}"
+            exit 1
+          fi
 
       - name: Record Compose screenshots (Roborazzi)
-        run: ./gradlew :app:recordRoborazziDebug --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew :app:recordRoborazziDebug --stacktrace 2>&1 | tee shots.log; then
+            msg=$(grep -E "^e: |error:|FAILED|What went wrong|Exception|Caused by" shots.log | head -40 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Screenshots failed::${msg}"
+            exit 1
+          fi
 
       - name: Collect screenshots
         run: |
